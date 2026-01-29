@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>WinXX — Tournament App</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Poppins', sans-serif; background: linear-gradient(180deg,#07060a,#0b0410); }
+  .neon { color: #c084fc; text-shadow: 0 0 8px rgba(192,132,252,0.25); }
+  .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid rgba(200,140,252,0.07); }
+  .small-muted { color: #9ca3af; font-size: 0.9rem; }
+  .hidden { display:none !important; }
+  .loader { border:6px solid rgba(255,255,255,0.06); border-top:6px solid #7c3aed; border-radius:50%; width:48px; height:48px; animation:spin 1s linear infinite;}
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body class="text-white">
+
+<!-- Loader -->
+<div id="loader" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+  <div class="loader"></div>
+</div>
+
+<!-- AUTH (login/signup) -->
+<div id="auth-screen" class="hidden min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-md card rounded-2xl p-8 shadow-lg">
+    <div class="text-center mb-4">
+      <h1 class="text-4xl font-bold neon">WinXX</h1>
+      <p class="small-muted">Your Gateway to Gaming Glory</p>
+    </div>
+    <div id="login-box">
+      <h2 class="text-2xl font-semibold mb-4">Login</h2>
+      <form id="login-form" class="space-y-3">
+        <input id="login-email" type="email" placeholder="Email" required class="w-full p-3 rounded-lg text-gray-900" />
+        <input id="login-password" type="password" placeholder="Password" required class="w-full p-3 rounded-lg text-gray-900" />
+        <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Login</button>
+      </form>
+      <p class="mt-3 small-muted text-center">Naye user? <a href="#" id="show-signup" class="text-violet-300">Sign up</a></p>
+    </div>
+    <div id="signup-box" class="hidden">
+      <h2 class="text-2xl font-semibold mb-4">Sign Up</h2>
+      <form id="signup-form" class="space-y-3">
+        <input id="signup-email" type="email" placeholder="Email" required class="w-full p-3 rounded-lg text-gray-900" />
+        <input id="signup-password" type="password" placeholder="Password (6+ characters)" required class="w-full p-3 rounded-lg text-gray-900" />
+        <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Create Account</button>
+      </form>
+      <p class="mt-3 small-muted text-center">Pehle se account? <a href="#" id="show-login" class="text-violet-300">Login</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" class="hidden min-h-screen flex flex-col">
+  <header class="flex items-center justify-between px-6 py-4 bg-black bg-opacity-30 border-b border-purple-900 sticky top-0 z-30">
+    <div class="flex items-center gap-4"> <h1 class="text-2xl font-bold neon">WinXX</h1> </div>
+    <div class="flex items-center gap-3">
+      <div class="text-right small-muted mr-4 hidden md:block">
+        <div id="user-email" class="font-medium"></div>
+        <div id="wallet-tiny" class="text-sm">₹0.00</div>
+      </div>
+      <button id="logout-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm">Logout</button>
+    </div>
+  </header>
+  <main class="flex-1 p-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <section class="md:col-span-1">
+                <div class="card p-5 rounded-xl mb-6">
+                <h3 class="text-lg font-semibold text-violet-300">My Wallet</h3>
+                <div class="mt-3">
+                    <div class="text-4xl font-bold text-green-400">₹<span id="wallet-balance">0.00</span></div>
+                    <div class="mt-4 grid grid-cols-3 gap-2">
+                    <button id="btn-add" class="py-2 px-2 bg-green-500 hover:bg-green-600 rounded-lg text-black font-semibold">Add</button>
+                    <button id="btn-withdraw" class="py-2 px-2 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-black font-semibold">Withdraw</button>
+                    <button id="btn-history" class="py-2 px-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-black font-semibold">History</button>
+                    </div>
+                </div>
+                </div>
+                <div class="card p-5 rounded-xl">
+                <h3 class="text-lg font-semibold text-violet-300">Quick Actions</h3>
+                <div class="mt-4 space-y-3">
+                    <button id="quick-join" class="w-full py-3 bg-violet-600 hover:bg-violet-700 rounded-lg">Browse Tournaments</button>
+                </div>
+                </div>
+            </section>
+            <section class="md:col-span-2">
+                <div class="card p-5 rounded-xl">
+                <h2 class="text-2xl font-bold text-violet-300">Upcoming Tournaments</h2>
+                <div id="tournaments-list" class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+                <div id="tournament-detail" class="card p-5 rounded-xl mt-6 hidden"></div>
+            </section>
+        </div>
+
+        <!-- Policies and Terms Section -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card p-5 rounded-xl">
+                <h2 class="text-2xl font-bold text-violet-300 mb-4">Privacy Policy</h2>
+                <div class="space-y-3 small-muted">
+                    <p>Winxx Tournament App respects your privacy. We collect basic user details such as name, email, and UPI ID only for verification and payment purposes. All uploaded screenshots, transactions, and personal data are securely stored on Firebase and are not shared with any third party. Users are advised not to share their login details with anyone. We ensure fair use of data and maintain complete transparency in wallet and tournament activities.</p>
+                </div>
+            </div>
+            <div class="card p-5 rounded-xl">
+                <h2 class="text-2xl font-bold text-violet-300 mb-4">Terms & Conditions</h2>
+                <div class="space-y-3 small-muted">
+                   <ol class="list-decimal list-inside space-y-2">
+                        <li>By using this app, you agree to follow all fair play and honesty rules.</li>
+                        <li>Entry fees paid for tournaments are non-refundable once the slot is confirmed.</li>
+                        <li>Fake or edited screenshots will result in account suspension and wallet freeze.</li>
+                        <li>Winning rewards are verified and credited to the winner’s UPI within 24–48 hours.</li>
+                        <li>The app is meant for skill-based tournaments only (no gambling or betting).</li>
+                        <li>Any misuse, fraud, or illegal activity will lead to permanent ban and possible legal action.</li>
+                        <li>The admin’s decision in case of disputes is final.</li>
+                   </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 p-4">
+  <div id="modal-box" class="bg-gray-800 border border-purple-900 p-6 rounded-xl w-11/12 max-w-lg text-white relative max-h-[90vh] overflow-y-auto">
+    <button id="modal-close-btn" class="absolute top-3 right-4 text-2xl text-gray-400 hover:text-white">&times;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, updateDoc, runTransaction, query, where, orderBy, getDocs, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ===================================================================
+  // PASO 1: PEGA AQUÍ LOS DATOS DE TU FIREBASE
+  // (¡MUY IMPORTANTE! La aplicación no funcionará sin esto)
+  // ===================================================================
+  const firebaseConfig = {
+  apiKey: "AIzaSyDf00dl8bQSORSFqH4xiRdT3Uzeme1RWeI",
+  authDomain: "tournament-d7997.firebaseapp.com",
+  databaseURL: "https://tournament-d7997-default-rtdb.firebaseio.com",
+  projectId: "tournament-d7997",
+  storageBucket: "tournament-d7997.firebasestorage.app",
+  messagingSenderId: "1066933503283",
+  appId: "1:1066933503283:web:df9a753f569ddec74dea46"
+};
+  // ===================================================================
+
+  // ===================================================================
+  // PASO 2: ACTUALIZA AQUÍ TU ID DE UPI Y LA URL DEL CÓDIGO QR
+  // ===================================================================
+  const ADMIN_UPI_ID = "scan code and pay to @winxx99"; // <-- INGRESA AQUÍ TU ID DE UPI
+  const ADMIN_QR_CODE_URL = "https://i.ibb.co/gMf9Gd0c/IMG-20251026-163206.jpg"; // <-- INGRESA AQUÍ LA URL DIRECTA DE LA IMAGEN DE TU CÓDIGO QR
+  // ===================================================================
+
+  let app, auth, db;
+  
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error) {
+    console.error("Firebase initialization failed:", error);
+    alert("Error: No se pudo conectar a la base de datos. Comprueba la configuración de Firebase.");
+    // Oculta el cargador incluso si falla la inicialización para que la página no se quede bloqueada.
+    document.getElementById('loader').classList.add('hidden');
+    document.getElementById('auth-screen').classList.remove('hidden');
+  }
+
+
+  const loader = document.getElementById('loader');
+  const authScreen = document.getElementById('auth-screen');
+  const appScreen = document.getElementById('app-screen');
+  const loginBox = document.getElementById('login-box');
+  const signupBox = document.getElementById('signup-box');
+  const tournamentsList = document.getElementById('tournaments-list');
+  const tournamentDetailEl = document.getElementById('tournament-detail');
+  const userEmailEl = document.getElementById('user-email');
+  const walletBalanceEl = document.getElementById('wallet-balance');
+  const walletTiny = document.getElementById('wallet-tiny');
+  const modal = document.getElementById('modal');
+  const modalContent = document.getElementById('modal-content');
+
+  let currentUser = null;
+  let unsubscribeUserWallet = null;
+
+  function showLoader() { loader.classList.remove('hidden'); }
+  function hideLoader() { loader.classList.add('hidden'); }
+  function showModal(html) { modalContent.innerHTML = html; modal.classList.remove('hidden'); }
+  function closeModal() { modal.classList.add('hidden'); }
+
+  document.getElementById('show-signup').addEventListener('click', (e) => { e.preventDefault(); loginBox.classList.add('hidden'); signupBox.classList.remove('hidden'); });
+  document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); signupBox.classList.add('hidden'); loginBox.classList.remove('hidden'); });
+
+  document.getElementById('signup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('signup-email').value; const password = document.getElementById('signup-password').value;
+    showLoader();
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await setDoc(doc(db, 'users', cred.user.uid), { email, wallet: 10.00, createdAt: serverTimestamp() });
+      alert('Account created! ₹10 signup bonus added.');
+    } catch (err) { alert(`Signup Error: ${err.message}`); } finally { hideLoader(); }
+  });
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value;
+    showLoader();
+    try { await signInWithEmailAndPassword(auth, email, password); } 
+    catch (err) { alert(`Login Error: ${err.message}`); } finally { hideLoader(); }
+  });
+
+  onAuthStateChanged(auth, (user) => {
+    if (unsubscribeUserWallet) unsubscribeUserWallet();
+    if (user) {
+      currentUser = user;
+      authScreen.classList.add('hidden'); appScreen.classList.remove('hidden');
+      userEmailEl.textContent = user.email;
+      const userDocRef = doc(db, 'users', user.uid);
+      unsubscribeUserWallet = onSnapshot(userDocRef, (docSnap) => {
+        const balance = docSnap.exists() ? (docSnap.data().wallet || 0) : 0;
+        walletBalanceEl.textContent = balance.toFixed(2);
+        walletTiny.textContent = `₹${balance.toFixed(2)}`;
+      });
+      loadTournaments();
+    } else {
+      currentUser = null;
+      authScreen.classList.remove('hidden'); appScreen.classList.add('hidden');
+    }
+    hideLoader();
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+  function loadTournaments() {
+    const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'));
+    onSnapshot(q, (snap) => {
+      tournamentsList.innerHTML = '';
+      if (snap.empty) { tournamentsList.innerHTML = '<p class="small-muted col-span-full">No tournaments available right now.</p>'; return; }
+      snap.forEach(docSnap => {
+        const t = docSnap.data(); const id = docSnap.id;
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-xl card cursor-pointer hover:border-purple-500 transition-all';
+        card.innerHTML = `
+          <h3 class="text-lg font-bold neon">${t.gameName || 'Tournament'}</h3>
+          <div class="mt-3 flex items-center justify-between">
+            <div class="small-muted">Entry: <span class="font-bold text-yellow-400">₹${t.entryFee || 0}</span></div>
+            <div class="small-muted">Prize: <span class="font-bold text-green-400">₹${t.prizePool || 0}</span></div>
+          </div>`;
+        card.addEventListener('click', () => showTournamentDetail(id));
+        tournamentsList.appendChild(card);
+      });
+    });
+  }
+  
+  async function showTournamentDetail(tournamentId) {
+    showLoader();
+    try {
+        const tDoc = await getDoc(doc(db, 'tournaments', tournamentId));
+        if (!tDoc.exists()) throw new Error('Tournament not found');
+        
+        const t = tDoc.data();
+        const joinedUsers = t.joinedUsers || [];
+        const hasJoined = currentUser && joinedUsers.includes(currentUser.uid);
+
+        let actionButtonHtml = '';
+        if (hasJoined) {
+            actionButtonHtml = `<button id="detail-btn-upload" class="py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg">Upload Score</button>`;
+        } else {
+            actionButtonHtml = `<button id="detail-btn-join" class="py-3 px-4 bg-violet-600 hover:bg-violet-700 rounded-lg">Join Tournament</button>`;
+        }
+
+        const leaderboardDoc = await getDoc(doc(db, "leaderboards", tournamentId));
+        const leaderboardData = leaderboardDoc.exists() 
+            ? leaderboardDoc.data().data.replace(/\n/g, '<br>') 
+            : '<p class="small-muted">Leaderboard not set yet.</p>';
+
+        tournamentDetailEl.innerHTML = `
+            <div class="flex justify-between items-center">
+                <div><h3 class="text-xl font-bold neon">${t.gameName}</h3></div>
+                <div>
+                    <div class="text-right small-muted">Entry</div>
+                    <div class="text-2xl font-bold text-yellow-400">₹${t.entryFee}</div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                    <h4 class="text-md font-semibold text-violet-300">Description</h4>
+                    <p class="small-muted">${t.description || 'Play, upload score, and win.'}</p>
+                    <div class="mt-4 flex gap-3">
+                        ${actionButtonHtml}
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-md font-semibold text-violet-300">Leaderboard</h4>
+                    <div class="mt-3 space-y-2 max-h-60 overflow-y-auto">${leaderboardData}</div>
+                </div>
+            </div>
+        `;
+        tournamentDetailEl.classList.remove('hidden');
+        tournamentDetailEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        if (hasJoined) {
+            document.getElementById('detail-btn-upload').onclick = () => openUploadDialog(tournamentId, t.gameName);
+        } else {
+            document.getElementById('detail-btn-join').onclick = () => handleJoin(tournamentId, t.entryFee, t.gameName);
+        }
+
+    } catch (err) { alert(`Error: ${err.message}`); } 
+    finally { hideLoader(); }
+  }
+
+  // ===================================================================
+  // SECCIÓN ACTUALIZADA: Se reemplazó confirm() por un pop-up modal personalizado
+  // ===================================================================
+  function handleJoin(tournamentId, entryFee, tournamentName) {
+    if (!currentUser) return alert('Please login first.');
+
+    const confirmationHtml = `
+      <h3 class="text-xl font-bold neon mb-4">Confirm Join</h3>
+      <p class="small-muted mb-6">Are you sure you want to join the '${tournamentName}' tournament for <span class="font-bold text-yellow-400">₹${entryFee}</span>? This amount will be deducted from your wallet and is non-refundable.</p>
+      <div class="flex justify-end gap-4">
+          <button id="confirm-cancel-btn" class="py-2 px-5 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">Cancel</button>
+          <button id="confirm-join-btn" class="py-2 px-5 bg-violet-600 hover:bg-violet-700 rounded-lg font-semibold">Confirm Join</button>
+      </div>
+    `;
+    showModal(confirmationHtml);
+
+    document.getElementById('confirm-cancel-btn').onclick = () => closeModal();
+    
+    document.getElementById('confirm-join-btn').onclick = async () => {
+        closeModal();
+        showLoader();
+        try {
+            const userRef = doc(db, 'users', currentUser.uid);
+            const tournamentRef = doc(db, 'tournaments', tournamentId);
+            
+            await runTransaction(db, async (tx) => {
+                const userDoc = await tx.get(userRef);
+                const tDoc = await tx.get(tournamentRef);
+                if (!userDoc.exists() || !tDoc.exists()) throw new Error("Data not found.");
+                
+                const balance = userDoc.data().wallet || 0;
+                if (balance < entryFee) throw new Error("Insufficient balance.");
+                
+                const joined = tDoc.data().joinedUsers || [];
+                if (joined.includes(currentUser.uid)) throw new Error("You have already joined.");
+                
+                tx.update(userRef, { wallet: balance - entryFee });
+                tx.update(tournamentRef, { joinedUsers: [...joined, currentUser.uid] });
+            });
+            
+            alert('Joined successfully!');
+
+            // --- Actualiza instantáneamente el botón de "Join" a "Upload" ---
+            const joinButton = document.getElementById('detail-btn-join');
+            if (joinButton) {
+                const uploadButton = document.createElement('button');
+                uploadButton.id = 'detail-btn-upload';
+                uploadButton.className = 'py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg';
+                uploadButton.textContent = 'Upload Score';
+                uploadButton.onclick = () => openUploadDialog(tournamentId, tournamentName);
+                joinButton.replaceWith(uploadButton);
+            }
+            // --- Fin de la actualización de la interfaz de usuario ---
+
+        } catch (err) { alert(`Join Failed: ${err.message}`); } 
+        finally { hideLoader(); }
+    };
+  }
+
+  function openUploadDialog(tournamentId, tournamentName) {
+    const html = `
+      <h3 class="text-xl font-bold neon mb-4">Upload Score for ${tournamentName}</h3>
+      <p class="small-muted mb-3">Enter your kills, damage, and final rank.</p>
+      
+      <div class="mb-4 p-3 rounded-lg bg-red-900 bg-opacity-40 text-red-300">
+          <p class="font-bold">📝 Note (Important):</p>
+          <p class="text-sm mt-1">Please upload your original score only. Fake or edited results will be rejected. All scores are manually verified by the Winxx Team before leaderboard update. If any mismatch is found, the player may lose their entry fee or account access.</p>
+          <p class="font-bold mt-3">सावधान:</p>
+          <p class="text-sm mt-1">सिर्फ अपना असली स्कोर डालें। अगर स्कोर गलत या फेक पाया गया तो रिजल्ट कैंसल कर दिया जाएगा और वॉलेट अमाउंट भी डिडक्ट हो सकता है।</p>
+      </div>
+
+      <div class="space-y-3">
+        <input type="number" id="score-kills-input" placeholder="Kills" required class="w-full p-3 rounded-lg text-gray-900" />
+        <input type="number" id="score-damage-input" placeholder="Damage" required class="w-full p-3 rounded-lg text-gray-900" />
+        <input type="text" id="score-rank-input" placeholder="Rank (Optional)" class="w-full p-3 rounded-lg text-gray-900" />
+      </div>
+      <button id="upload-score-btn" class="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Upload Now</button>
+    `;
+    showModal(html);
+    
+    document.getElementById('upload-score-btn').onclick = async () => {
+        const killsInput = document.getElementById('score-kills-input');
+        const damageInput = document.getElementById('score-damage-input');
+        const rankInput = document.getElementById('score-rank-input');
+
+        const kills = parseInt(killsInput.value, 10);
+        const damage = parseInt(damageInput.value, 10);
+        const rank = rankInput.value.trim();
+
+        if (isNaN(kills) || isNaN(damage) || kills < 0 || damage < 0) {
+            return alert('Please enter valid numbers for Kills and Damage.');
+        }
+
+        closeModal();
+        showLoader();
+        try {
+            await addDoc(collection(db, 'scores'), {
+                userId: currentUser.uid,
+                userEmail: currentUser.email,
+                tournamentId: tournamentId,
+                kills: kills,
+                damage: damage,
+                rank: rank || 'Not provided',
+                createdAt: serverTimestamp()
+            });
+            alert('Score submitted successfully!');
+        } catch (err) {
+            alert(`Submission Failed: ${err.message}`);
+        } finally {
+            hideLoader();
+        }
+    };
+  }
+
+  document.getElementById('btn-add').addEventListener('click', () => {
+    const html = `
+      <h3 class="text-xl font-bold neon mb-4">Add Cash to Wallet</h3>
+      <div class="mb-4 p-3 rounded-lg bg-yellow-900 bg-opacity-40 text-yellow-300 text-center">
+        <p class="font-bold">Note: Wallet updates are verified by our team. It may take some time for the amount to reflect.</p>
+        <p class="font-bold mt-1">ध्यान दें: वॉलेट अपडेट हमारी टीम द्वारा सत्यापित होते हैं। राशि दिखने में कुछ समय लग सकता है।</p>
+      </div>
+      <div class="mb-4 p-4 card rounded-lg text-center">
+        <p class="small-muted">Scan QR or use UPI ID to pay:</p>
+        <img src="${ADMIN_QR_CODE_URL}" alt="UPI QR Code" class="mx-auto my-3 w-40 h-40 border rounded-md">
+        <p class="font-mono bg-black bg-opacity-30 p-2 rounded break-all">${ADMIN_UPI_ID}</p>
+      </div>
+      <p class="text-sm text-gray-400 mb-4">After paying, fill the form below to get the amount in your wallet.</p>
+      <form id="add-cash-form" class="space-y-3">
+          <input type="text" id="request-name" placeholder="Your Name" class="w-full p-3 rounded-lg text-gray-900" required>
+          <input type="number" id="request-amount" placeholder="Amount Sent (e.g., 100)" class="w-full p-3 rounded-lg text-gray-900" required>
+          <input type="time" id="request-time" class="w-full p-3 rounded-lg text-gray-900" required>
+          <input type="text" id="request-tx-id" placeholder="UPI Transaction ID (Optional)" class="w-full p-3 rounded-lg text-gray-900">
+          <p class="text-xs text-gray-400 -mt-2 mb-2 px-1">Note: Agr user transaction id dale ga to payment approved chance jyada hoge.</p>
+          <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Submit Request</button>
+      </form>`;
+    showModal(html);
+    document.getElementById('add-cash-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('request-name').value.trim();
+      const amount = parseFloat(document.getElementById('request-amount').value);
+      const time = document.getElementById('request-time').value;
+      const transactionId = document.getElementById('request-tx-id').value.trim();
+      
+      if (!currentUser || !name || isNaN(amount) || amount <= 0 || !time) {
+        return alert("Please enter valid name, amount, and time details.");
+      }
+      
+      closeModal(); 
+      showLoader();
+      
+      try {
+        const requestPayload = {
+          userId: currentUser.uid,
+          userEmail: currentUser.email,
+          name: name,
+          amount: amount,
+          paymentTime: time,
+          status: "pending",
+          createdAt: serverTimestamp()
+        };
+
+        if (transactionId) {
+          requestPayload.transactionId = transactionId;
+        }
+
+        await addDoc(collection(db, "paymentRequests"), requestPayload);
+        alert("Request submitted! We will verify and update your wallet soon.");
+      } catch (err) { 
+        alert(`Request Failed: ${err.message}`); 
+      } finally { 
+        hideLoader(); 
+      }
+    });
+  });
+
+  document.getElementById('btn-history').addEventListener('click', async () => {
+    if (!currentUser) return alert("Please login first.");
+    showLoader();
+    try {
+        const paymentsQuery = query(
+            collection(db, 'paymentRequests'),
+            where('userId', '==', currentUser.uid),
+            orderBy('createdAt', 'desc')
+        );
+        const paymentDocs = await getDocs(paymentsQuery);
+
+        const withdrawalsQuery = query(
+            collection(db, 'withdrawals'),
+            where('userId', '==', currentUser.uid),
+            orderBy('timestamp', 'desc')
+        );
+        const withdrawalDocs = await getDocs(withdrawalsQuery);
+
+        const allTransactions = [];
+        paymentDocs.forEach(doc => {
+            const data = doc.data();
+            allTransactions.push({ type: 'payment', ...data, date: data.createdAt?.toDate() });
+        });
+        withdrawalDocs.forEach(doc => {
+            const data = doc.data();
+            allTransactions.push({ type: 'withdrawal', ...data, date: data.timestamp?.toDate() });
+        });
+        
+        allTransactions.sort((a, b) => (b.date || 0) - (a.date || 0));
+
+        let historyHtml = '<div class="space-y-3 max-h-96 overflow-y-auto">';
+        if (allTransactions.length === 0) {
+            historyHtml += '<p class="small-muted">No transaction history found.</p>';
+        } else {
+            allTransactions.forEach(tx => {
+                if (tx.type === 'payment') {
+                    let statusColor = 'text-yellow-400';
+                    if (tx.status === 'approved') statusColor = 'text-green-400';
+                    if (tx.status === 'rejected') statusColor = 'text-red-400';
+                    historyHtml += `
+                        <div class="p-3 card rounded-lg flex justify-between items-center">
+                            <div><p class="font-semibold">Add Cash Request</p><p class="text-xs text-gray-400">${tx.date ? tx.date.toLocaleString() : 'No date'}</p></div>
+                            <div class="text-right"><p class="font-bold text-xl">₹${tx.amount}</p><p class="text-sm font-semibold ${statusColor}">${tx.status.toUpperCase()}</p></div>
+                        </div>`;
+                } else if (tx.type === 'withdrawal') {
+                    let statusColor = 'text-yellow-400';
+                    if (tx.status === 'completed') statusColor = 'text-green-400';
+                    if (tx.status === 'rejected') statusColor = 'text-red-400';
+                    historyHtml += `
+                        <div class="p-3 card rounded-lg flex justify-between items-center">
+                            <div><p class="font-semibold">Withdrawal Request</p><p class="text-xs text-gray-400">${tx.date ? tx.date.toLocaleString() : 'No date'}</p></div>
+                            <div class="text-right"><p class="font-bold text-xl text-red-400">- ₹${tx.amount}</p><p class="text-sm font-semibold ${statusColor}">${tx.status.toUpperCase()}</p></div>
+                        </div>`;
+                }
+            });
+        }
+        historyHtml += '</div>';
+        showModal(`<h3 class="text-xl font-bold neon mb-4">Transaction History</h3>${historyHtml}`);
+    } catch (err) { 
+        console.error("History Error:", err);
+        alert(`History Error: ${err.message}`); 
+    } finally { 
+        hideLoader(); 
+    }
+  });
+
+  document.getElementById('btn-withdraw').addEventListener('click', () => {
+    const html = `
+      <h3 class="text-xl font-bold neon mb-4">Request Withdrawal</h3>
+      <div class="mb-4 p-3 rounded-lg bg-yellow-900 bg-opacity-40 text-yellow-300 text-center">
+        <p class="font-bold">Important: Withdrawals are processed by our team and may take 24-48 hours to be credited.</p>
+        <p class="font-bold mt-1">महत्वपूर्ण: निकासी हमारी टीम द्वारा प्रोसेस की जाती है और जमा होने में 24-48 घंटे लग सकते हैं।</p>
+      </div>
+      <input id="withdraw-amount" type="number" placeholder="Amount (e.g., 100)" class="w-full p-3 my-2 rounded-lg text-gray-900" />
+      <input id="withdraw-details" placeholder="Your UPI ID or Bank Details" class="w-full p-3 mb-3 rounded-lg text-gray-900" />
+      <button id="withdraw-submit" class="w-full py-3 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-black font-semibold">Submit Request</button>`;
+    showModal(html);
+    document.getElementById('withdraw-submit').onclick = async () => {
+      const amount = parseFloat(document.getElementById('withdraw-amount').value);
+      const details = document.getElementById('withdraw-details').value.trim();
+      if (!amount || amount <= 0 || !details) return alert('Please enter all details correctly.');
+      closeModal(); showLoader();
+      const userRef = doc(db, 'users', currentUser.uid);
+      try {
+        await runTransaction(db, async (tx) => {
+          const userDoc = await tx.get(userRef);
+          if (!userDoc.exists()) throw new Error("User data not found.");
+          const balance = userDoc.data().wallet || 0;
+          if (balance < amount) throw new Error("Insufficient balance.");
+          tx.update(userRef, { wallet: balance - amount });
+          await addDoc(collection(db, 'withdrawals'), { userId: currentUser.uid, userEmail: currentUser.email, amount, details, status: 'pending', timestamp: serverTimestamp() });
+        });
+        alert('Withdrawal request sent successfully!');
+      } catch (err) { alert(`Request Failed: ${err.message}`); } finally { hideLoader(); }
+    };
+  });
+
+  document.getElementById('quick-join').addEventListener('click', () => { document.getElementById('tournaments-list').scrollIntoView({ behavior: 'smooth' }); });
+  modal.addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+</script>
+
+</body>
+</html>
